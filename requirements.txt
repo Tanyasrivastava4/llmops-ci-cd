@@ -4,3 +4,4 @@ faiss-cpu
 torch
 pandas
 pytest
+accelerate
