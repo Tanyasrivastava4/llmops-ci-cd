@@ -41,24 +41,15 @@ jobs:
         run: |
           pytest tests/ --maxfail=1 --disable-warnings -q
 
-
-       - name: Run RAG pipeline with HF login
-         env:
-           HF_TOKEN: ${{ secrets.HF_TOKEN }}
-         run: |
-           python -c "from huggingface_hub import login; login(token='$HF_TOKEN')"
-           python rag_systems/run_rag_pipeline.py
-
-
       # -------------------------------
       # 5. Run RAG pipeline with HF login
       # -------------------------------
-     # - name: Run RAG pipeline
-#        env:
- #         HF_TOKEN: ${{ secrets.HF_TOKEN }}
-  #      run: |
-   #       python -c "from huggingface_hub import login; login(token='$HF_TOKEN')"
-    #      python rag_system/run_rag_pipeline.py
+      - name: Run RAG pipeline with HF login
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        run: |
+          python -c "from huggingface_hub import login; login(token='$HF_TOKEN')"
+          python rag_systems/run_rag_pipeline.py
 
       # -------------------------------
       # 6. Upload model_responses.csv as artifact
@@ -68,3 +59,4 @@ jobs:
         with:
           name: model_responses
           path: outputs/model_responses.csv
+
