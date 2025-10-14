@@ -1,0 +1,58 @@
+name: RAG CI/CD Pipeline
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+    branches:
+      - main
+
+jobs:
+  build-and-test:
+    runs-on: ubuntu-latest
+    steps:
+      # -------------------------------
+      # 1. Checkout code
+      # -------------------------------
+      - name: Checkout repository
+        uses: actions/checkout@v3
+
+      # -------------------------------
+      # 2. Set up Python
+      # -------------------------------
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: 3.11
+
+      # -------------------------------
+      # 3. Install dependencies
+      # -------------------------------
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # -------------------------------
+      # 4. Run tests
+      # -------------------------------
+      - name: Run pytest
+        run: |
+          pytest tests/ --maxfail=1 --disable-warnings -q
+
+      # -------------------------------
+      # 5. Run RAG pipeline
+      # -------------------------------
+      - name: Run RAG pipeline
+        run: |
+          python rag_system/run_rag_pipeline.py
+
+      # -------------------------------
+      # 6. Upload model_responses.csv as artifact
+      # -------------------------------
+      - name: Upload results
+        uses: actions/upload-artifact@v3
+        with:
+          name: model_responses
+          path: outputs/model_responses.csv
