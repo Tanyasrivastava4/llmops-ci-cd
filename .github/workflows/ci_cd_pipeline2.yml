@@ -182,13 +182,6 @@
 
 
 
-
-
-
-
-
-
-
 name: RAG CI/CD Pipeline
 
 on:
@@ -271,9 +264,8 @@ jobs:
 
           cat <<'EOF' > deploy_script.py
           import os
-         # from salad import SaladClient
+          #from salad import SaladClient
           from salad_cloud_sdk import SaladClient
-
           api_key = os.getenv("WEBHOOK_SECRET_KEY")
           if not api_key:
               raise ValueError("❌ Missing WEBHOOK_SECRET_KEY secret in GitHub Actions!")
@@ -285,3 +277,11 @@ jobs:
           EOF
 
           python deploy_script.py
+
+
+
+
+
+
+
+
