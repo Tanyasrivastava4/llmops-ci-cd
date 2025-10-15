@@ -257,17 +257,18 @@ jobs:
           WEBHOOK_SECRET_KEY: ${{ secrets.WEBHOOK_SECRET_KEY }}
         run: |
           pip install --upgrade salad-cloud-sdk
+
           python - <<'EOF'
-from salad import SaladClient
-import os
+          import os
+          from salad import SaladClient
 
-api_key = os.getenv("WEBHOOK_SECRET_KEY")
-if not api_key:
-    raise ValueError("❌ Missing WEBHOOK_SECRET_KEY secret in GitHub Actions!")
+          api_key = os.getenv("WEBHOOK_SECRET_KEY")
+          if not api_key:
+              raise ValueError("❌ Missing WEBHOOK_SECRET_KEY secret in GitHub Actions!")
 
-client = SaladClient(api_key=api_key)
-client.deploy(model="rag_system", gpu_type="RTX5090")
+          client = SaladClient(api_key=api_key)
+          client.deploy(model="rag_system", gpu_type="RTX5090")
 
-print("✅ Deployment triggered successfully on SaladCloud!")
-EOF
+          print("✅ Deployment triggered successfully on SaladCloud!")
+          EOF
 
