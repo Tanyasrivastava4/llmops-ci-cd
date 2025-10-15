@@ -156,7 +156,8 @@ jobs:
       # 2. Install Salad CLI
       # -------------------------------
       - name: Install Salad CLI
-        run: pip install salad-cli
+        #run: pip install salad-cli
+        run: pip install --upgrade salad-sdk
 
       # -------------------------------
       # 3. Download artifact from previous job
