@@ -1,3 +1,6 @@
+import sys, os
+sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
 from rag_systems.run_rag_pipeline import retrieve, generate_answer
 
 def test_accuracy():

@@ -3,3 +3,5 @@ venv/
 __pycache__/
 .dvc/
 .env
+!data/documents.csv
+!data/golden_dataset.csv
