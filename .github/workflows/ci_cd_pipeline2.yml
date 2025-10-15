@@ -174,7 +174,17 @@
     #  - name: Deploy to Salad
      #   env:
       #    SALAD_TOKEN: ${{ secrets.WEBHOOK_SECRET_KEY }}
-       # run: salad deploy --gpu-type=RTX5090
+       # run: salad deploy --gpu-type=RTX5
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -197,7 +207,7 @@ jobs:
       # 1. Checkout code
       # -------------------------------
       - name: Checkout repository
-        uses: actions/checkout@v3
+        uses: actions/checkout@v4   # ✅ updated version (v3 deprecated)
 
       # -------------------------------
       # 2. Set up Python
@@ -205,7 +215,7 @@ jobs:
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
         with:
-          python-version: 3.11
+          python-version: '3.11'
 
       # -------------------------------
       # 3. Install dependencies
@@ -244,7 +254,7 @@ jobs:
       # 7. Upload model_responses.csv as artifact
       # -------------------------------
       - name: Upload results
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v4   # ✅ updated version (v3 deprecated)
         with:
           name: model_responses
           path: outputs/model_responses.csv
@@ -257,8 +267,9 @@ jobs:
           WEBHOOK_SECRET_KEY: ${{ secrets.WEBHOOK_SECRET_KEY }}
         run: |
           pip install --upgrade salad-cloud-sdk
+          echo "✅ Salad SDK installed successfully."
 
-          python - <<'EOF'
+          cat <<'EOF' > deploy_script.py
           import os
           from salad import SaladClient
 
@@ -272,3 +283,4 @@ jobs:
           print("✅ Deployment triggered successfully on SaladCloud!")
           EOF
 
+          python deploy_script.py
