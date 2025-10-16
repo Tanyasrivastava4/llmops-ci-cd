@@ -89,7 +89,7 @@ if not api_key:
 
 sdk = SaladCloudSdk(api_key=api_key)
 
-# ✅ Create a new job on Salad Cloud
+# Create a new job on Salad Cloud
 job = sdk.jobs.create(
     image="docker.io/tanyasrivastava930/rag_systems:latest",
     gpu_type="RTX5090",
@@ -102,5 +102,5 @@ job = sdk.jobs.create(
 print(f"✅ Deployment triggered successfully! Job ID: {job.id}")
 EOF
 
-          # Run deploy script
+        
           python deploy_script.py
