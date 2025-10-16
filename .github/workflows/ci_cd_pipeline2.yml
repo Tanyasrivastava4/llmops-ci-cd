@@ -79,8 +79,8 @@ jobs:
           pip install --upgrade salad-cloud-sdk
           echo "✅ Salad SDK installed successfully."
 
-          # Create deploy script safely without heredoc
-          echo "import os
+          # Create deploy_script.py safely using printf
+          printf "%s\n" "import os
 from salad_cloud_sdk import SaladCloudSdk
 
 api_key = os.getenv('WEBHOOK_SECRET_KEY')
