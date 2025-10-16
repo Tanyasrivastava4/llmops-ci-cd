@@ -80,28 +80,27 @@ jobs:
 
           # Create deploy script
           cat <<'EOF' > deploy_script.py
-import os
-from salad_cloud_sdk import SaladClient  # Make sure this matches your SDK
+          import os
+          from salad_cloud_sdk import SaladClient  # Make sure this matches your SDK
 
-api_key = os.getenv("WEBHOOK_SECRET_KEY")
-if not api_key:
-    raise ValueError("❌ Missing WEBHOOK_SECRET_KEY secret in GitHub Actions!")
+          api_key = os.getenv("WEBHOOK_SECRET_KEY")
+          if not api_key:
+              raise ValueError("❌ Missing WEBHOOK_SECRET_KEY secret in GitHub Actions!")
 
-sdk = SaladClient(api_key=api_key)
+          sdk = SaladClient(api_key=api_key)
 
 # ✅ Create a new job on Salad Cloud
-job = sdk.jobs.create(
-    image="docker.io/tanyasrivastava930/rag_systems:latest",
-    gpu_type="RTX5090",
-    command=[
-        "bash",
-        "-c",
-        "pip install -r /app/requirements.txt && python rag_systems/run_rag_pipeline.py"
-    ],
-)
-
-print(f"✅ Deployment triggered successfully! Job ID: {job.id}")
-EOF
+         job = sdk.jobs.create(
+             image="docker.io/tanyasrivastava930/rag_systems:latest",
+             gpu_type="RTX5090",
+             command=[
+                  "bash",
+                  "-c",
+                  "pip install -r /app/requirements.txt && python rag_systems/run_rag_pipeline.py"
+             ],
+         )
+         print(f"✅ Deployment triggered successfully! Job ID: {job.id}")
+         EOF
 
           # Run deploy script
           python deploy_script.py
