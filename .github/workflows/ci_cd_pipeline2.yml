@@ -42,10 +42,11 @@ jobs:
           pytest tests/ --maxfail=1 --disable-warnings -q
 
       # -------------------------------
-      # 5. Clean workspace (free up space)
+      # 5. Clean workspace
       # -------------------------------
       - name: Clean workspace
         run: |
+          mkdir -p outputs
           rm -rf outputs/*
           rm -rf .cache/*
 
@@ -56,7 +57,7 @@ jobs:
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
         run: |
-          python -c "from huggingface_hub import login; login(token='$HF_TOKEN')"
+          python -c "import os; from huggingface_hub import login; login(token=os.environ['HF_TOKEN'])"
           python rag_systems/run_rag_pipeline.py
 
       # -------------------------------
@@ -89,7 +90,6 @@ if not api_key:
 
 sdk = SaladCloudSdk(api_key=api_key)
 
-# Create a new job on Salad Cloud
 job = sdk.jobs.create(
     image="docker.io/tanyasrivastava930/rag_systems:latest",
     gpu_type="RTX5090",
@@ -102,5 +102,4 @@ job = sdk.jobs.create(
 print(f"✅ Deployment triggered successfully! Job ID: {job.id}")
 EOF
 
-        
           python deploy_script.py
