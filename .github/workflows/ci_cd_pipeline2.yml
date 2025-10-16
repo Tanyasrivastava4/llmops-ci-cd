@@ -77,18 +77,13 @@ jobs:
         run: |
           pip install --upgrade salad-cloud-sdk
           echo "✅ Salad SDK installed successfully."
-
-          # Create deploy script
           cat <<'EOF' > deploy_script.py
 import os
 from salad_cloud_sdk import SaladCloudSdk
-
 api_key = os.getenv("WEBHOOK_SECRET_KEY")
 if not api_key:
     raise ValueError("❌ Missing WEBHOOK_SECRET_KEY secret in GitHub Actions!")
-
 sdk = SaladCloudSdk(api_key=api_key)
-
 # ✅ Create a new job on Salad Cloud
 job = sdk.jobs.create(
     image="docker.io/tanyasrivastava930/rag_systems:latest",
@@ -99,10 +94,7 @@ job = sdk.jobs.create(
         "pip install -r /app/requirements.txt && python rag_systems/run_rag_pipeline.py"
     ],
 )
-
 print(f"✅ Deployment triggered successfully! Job ID: {job.id}")
-EOF
-
-          # Run deploy script
+EOF         # Run deploy script
           python deploy_script.py
 
