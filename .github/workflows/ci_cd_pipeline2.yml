@@ -100,7 +100,7 @@ jobs:
              ],
          )
          print(f"✅ Deployment triggered successfully! Job ID: {job.id}")
-         EOF
+EOF
 
           # Run deploy script
           python deploy_script.py
