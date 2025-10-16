@@ -176,8 +176,7 @@
     #  - name: Deploy to Salad
      #   env:
       #    SALAD_TOKEN: ${{ secrets.WEBHOOK_SECRET_KEY }}
-       # run: salad deploy --gpu-type=RTX5
-
+       # run: salad deploy --gpu-type=RT
 
 
 
@@ -202,7 +201,7 @@ jobs:
       # 1. Checkout code
       # -------------------------------
       - name: Checkout repository
-        uses: actions/checkout@v4   # ✅ updated version (v3 deprecated)
+        uses: actions/checkout@v4
 
       # -------------------------------
       # 2. Set up Python
@@ -249,15 +248,14 @@ jobs:
       # 7. Upload model_responses.csv as artifact
       # -------------------------------
       - name: Upload results
-        uses: actions/upload-artifact@v4   # ✅ updated version (v3 deprecated)
+        uses: actions/upload-artifact@v4
         with:
           name: model_responses
           path: outputs/model_responses.csv
 
-
       # -------------------------------
-# 8. Deploy with Salad SDK
-# -------------------------------
+      # 8. Deploy with Salad SDK
+      # -------------------------------
       - name: Deploy with Salad SDK
         env:
           WEBHOOK_SECRET_KEY: ${{ secrets.WEBHOOK_SECRET_KEY }}
@@ -266,40 +264,36 @@ jobs:
           echo "✅ Salad SDK installed successfully."
 
           cat <<'EOF' > deploy_script.py
-          import os
-          from salad_cloud_sdk import SaladCloudSdk
+import os
+from salad_cloud_sdk import SaladCloudSdk
 
-          api_key = os.getenv("WEBHOOK_SECRET_KEY")
-          if not api_key:
-              raise ValueError("❌ Missing WEBHOOK_SECRET_KEY secret in GitHub Actions!")
+api_key = os.getenv("WEBHOOK_SECRET_KEY")
+if not api_key:
+    raise ValueError("❌ Missing WEBHOOK_SECRET_KEY secret in GitHub Actions!")
 
-          sdk = SaladCloudSdk(api_key=api_key)
+sdk = SaladCloudSdk(api_key=api_key)
 
 # ✅ Create a new job on Salad Cloud
 # This will install dependencies on Salad Cloud before running the script
-          job = sdk.jobs.create(
-              image="docker.io/tanyasrivastava930/rag_systems:latest",
-              gpu_type="RTX5090",
-              command=[
-                 "bash",
-                 "-c",
-                 "pip install -r /app/requirements.txt && python rag_systems/run_rag_pipeline.py"
-              ],
-          )
+job = sdk.jobs.create(
+    image="docker.io/tanyasrivastava930/rag_systems:latest",
+    gpu_type="RTX5090",
+    command=[
+        "bash",
+        "-c",
+        "pip install -r /app/requirements.txt && python rag_systems/run_rag_pipeline.py"
+    ],
+)
 
-          print(f"✅ Deployment triggered successfully! Job ID: {job.id}")
-          EOF
+print(f"✅ Deployment triggered successfully! Job ID: {job.id}")
+EOF
 
           python deploy_script.py
 
 
 
 
-      # -------------------------------
-      # 8. Deploy with Salad SDK
-      # -------------------------------
 
-     
 
 
 
