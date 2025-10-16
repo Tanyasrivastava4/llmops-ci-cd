@@ -94,7 +94,7 @@ job = sdk.jobs.create(
         "pip install -r /app/requirements.txt && python rag_systems/run_rag_pipeline.py"
     ],
 )
-print(f"✅ Deployment triggered successfully! Job ID: {job.id}")
-EOF         # Run deploy script
+print(f"Deployment triggered successfully! Job ID: {job.id}")
+EOF        
           python deploy_script.py
 
