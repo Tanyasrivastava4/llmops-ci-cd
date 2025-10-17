@@ -1,43 +1,38 @@
-# deploy.py
 import os
 from salad_cloud_sdk import SaladCloudSdk
-#from salad_cloud_sdk.models import CreateContainerGroup
-from salad_cloud_sdk.models import ContainerGroup 
-# -------------------------------
-# 1️⃣ Configuration
-# -------------------------------
-ORGANIZATION_NAME = os.getenv("ORGANIZATION_NAME", "intileo")  # replace or set in .env
-PROJECT_NAME = os.getenv("PROJECT_NAME", "replit")             # replace or set in .env
-CONTAINER_NAME = "rag-system-deploy"
-IMAGE_NAME = "docker.io/tanyasrivastava930/rag_systems:latest"  # your Docker Hub image
-GPU_TYPE = "RTX5090"
+from dotenv import load_dotenv
 
-# -------------------------------
-# 2️⃣ Environment Variables
-# -------------------------------
-SALAD_API_KEY = os.getenv("SALAD_API_KEY")
+# ---------------------------------------
+# Load environment variables
+# ---------------------------------------
+load_dotenv()
+
+SALAD_API_KEY = os.getenv("SALAD_API_KEY", "")
+ORGANIZATION_NAME = os.getenv("ORGANIZATION_NAME", "")
+PROJECT_NAME = os.getenv("PROJECT_NAME", "")
+IMAGE_NAME = os.getenv("IMAGE_NAME", "docker.io/yourusername/llmops:latest")
+CONTAINER_NAME = os.getenv("CONTAINER_NAME", "rag-llmops-deploy")
+GPU_TYPE = os.getenv("GPU_TYPE", "ed563892-aacd-40f5-80b7-90c9be6c759b")  # Example GPU class
 HF_TOKEN = os.getenv("HF_TOKEN", "")
 
-if not SALAD_API_KEY:
-    raise ValueError("❌ Missing SALAD_API_KEY in environment variables.")
+# ---------------------------------------
+# Initialize SDK
+# ---------------------------------------
+sdk = SaladCloudSdk(api_key=SALAD_API_KEY, timeout=10000)
 
-# -------------------------------
-# 3️⃣ Initialize SDK
-# -------------------------------
-sdk = SaladCloudSdk(api_key=SALAD_API_KEY)
 print("🚀 Deploying container group to SaladCloud...")
 
-# -------------------------------
-# 4️⃣ Create deployment request
-# -------------------------------
-request_body = ContainerGroup(
-    name=CONTAINER_NAME,
-    display_name=CONTAINER_NAME,
-    container={
+# ---------------------------------------
+# Define container group request
+# ---------------------------------------
+container_group_request = {
+    "name": CONTAINER_NAME,
+    "display_name": CONTAINER_NAME,
+    "container": {
         "image": IMAGE_NAME,
         "resources": {
             "cpu": 2,
-            "memory": 4096,          # in MB
+            "memory": 4096,  # MB
             "gpu_classes": [GPU_TYPE]
         },
         "command": [
@@ -49,28 +44,24 @@ request_body = ContainerGroup(
             "HF_TOKEN": HF_TOKEN
         },
     },
-    autostart_policy=True,      # ✅ Boolean as required
-    restart_policy="always",    # ✅ String
-    replicas=1
-)
+    "autostart_policy": True,
+    "restart_policy": "always",
+    "replicas": 1,
+    "country_codes": ["us"],
+    "priority": "high"
+}
 
-# -------------------------------
-# 5️⃣ Deploy container group
-# -------------------------------
+# ---------------------------------------
+# Create container group
+# ---------------------------------------
 try:
     result = sdk.container_groups.create_container_group(
-        request_body=request_body,
         organization_name=ORGANIZATION_NAME,
-        project_name=PROJECT_NAME
+        project_name=PROJECT_NAME,
+        request_body=container_group_request
     )
-
-    print("✅ Deployment request sent successfully!")
-    print(f"🔗 Container Group ID: {result.id}")
-    print(f"🌍 Status: {result.status}")
-
+    print("✅ Deployment successful!")
+    print(result)
 except Exception as e:
-    print("❌ Deployment failed with error:")
-    print(e)
-
-print("🏁 Deployment script finished.")
+    print(f"❌ Deployment failed with error:\n{e}")
 
