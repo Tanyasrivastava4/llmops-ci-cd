@@ -9,17 +9,18 @@ on:
       - main
 
 jobs:
-  build-and-test:
+  build-test-deploy:
     runs-on: ubuntu-latest
+
     steps:
       # -------------------------------
-      # 1. Checkout code
+      # 1️⃣ Checkout the code
       # -------------------------------
       - name: Checkout repository
         uses: actions/checkout@v4
 
       # -------------------------------
-      # 2. Set up Python
+      # 2️⃣ Set up Python
       # -------------------------------
       - name: Set up Python 3.11
         uses: actions/setup-python@v5
@@ -27,7 +28,7 @@ jobs:
           python-version: '3.11'
 
       # -------------------------------
-      # 3. Install dependencies
+      # 3️⃣ Install dependencies
       # -------------------------------
       - name: Install dependencies
         run: |
@@ -35,14 +36,14 @@ jobs:
           pip install -r requirements.txt
 
       # -------------------------------
-      # 4. Run tests
+      # 4️⃣ Run tests
       # -------------------------------
       - name: Run pytest
         run: |
           pytest tests/ --maxfail=1 --disable-warnings -q
 
       # -------------------------------
-      # 5. Clean workspace
+      # 5️⃣ Clean workspace
       # -------------------------------
       - name: Clean workspace
         run: |
@@ -51,7 +52,7 @@ jobs:
           rm -rf .cache/*
 
       # -------------------------------
-      # 6. Run RAG pipeline with HF login
+      # 6️⃣ Run RAG pipeline (HF login)
       # -------------------------------
       - name: Run RAG pipeline with HF login
         env:
@@ -61,44 +62,27 @@ jobs:
           python rag_systems/run_rag_pipeline.py
 
       # -------------------------------
-      # 7. Upload model_responses.csv as artifact
+      # 7️⃣ Upload pipeline results
       # -------------------------------
-      - name: Upload results
+      - name: Upload model_responses.csv as artifact
         uses: actions/upload-artifact@v4
         with:
           name: model_responses
           path: outputs/model_responses.csv
 
       # -------------------------------
-      # 8. Deploy with Salad SDK
+      # 8️⃣ Deploy to SaladCloud using deploy.py
       # -------------------------------
-      - name: Deploy with Salad SDK
+      - name: Deploy to SaladCloud
         env:
-          WEBHOOK_SECRET_KEY: ${{ secrets.WEBHOOK_SECRET_KEY }}
+          SALAD_API_KEY: ${{ secrets.SALAD_API_KEY }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          ORGANIZATION_NAME: "intileo"
+          PROJECT_NAME: "replit"
+          IMAGE_NAME: "docker.io/tanyasrivastava930/rag_systems:latest"
+          CONTAINER_NAME: "rag-llmops-deploy"
+          GPU_TYPE: "ed563892-aacd-40f5-80b7-90c9be6c759b"
         run: |
-          pip install --upgrade salad-cloud-sdk
-          echo "✅ Salad SDK installed successfully."
-
-          # Create deploy_script.py safely using printf
-          printf "%s\n" "import os
-from salad_cloud_sdk import SaladCloudSdk
-
-api_key = os.getenv('WEBHOOK_SECRET_KEY')
-if not api_key:
-    raise ValueError('❌ Missing WEBHOOK_SECRET_KEY secret in GitHub Actions!')
-
-sdk = SaladCloudSdk(api_key=api_key)
-
-job = sdk.jobs.create(
-    image='docker.io/tanyasrivastava930/rag_systems:latest',
-    gpu_type='RTX5090',
-    command=[
-        'bash',
-        '-c',
-        'pip install -r /app/requirements.txt && python rag_systems/run_rag_pipeline.py'
-    ],
-)
-print(f'✅ Deployment triggered successfully! Job ID: {job.id}')" > deploy_script.py
-
-          python deploy_script.py
-
+          pip install --upgrade salad-cloud-sdk python-dotenv
+          echo "✅ Dependencies installed."
+          python deploy.py
