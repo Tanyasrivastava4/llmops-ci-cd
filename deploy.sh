@@ -20,9 +20,17 @@ if [ -z "$SALAD_API_KEY" ]; then
   exit 1
 fi
 
+if [ -z "$ORGANIZATION_NAME" ]; then
+  export ORGANIZATION_NAME="intileo"
+fi
+
+if [ -z "$PROJECT_NAME" ]; then
+  export PROJECT_NAME="replit"
+fi
+
 # Hugging Face token is optional
 if [ -z "$HF_TOKEN" ]; then
-  echo "⚠️  Warning: HF_TOKEN not found. Continuing without it..."
+  echo "⚠️ Warning: HF_TOKEN not found. Continuing without it..."
 else
   echo "🔑 Hugging Face token detected."
 fi
