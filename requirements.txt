@@ -6,3 +6,7 @@ pandas
 pytest
 accelerate
 huggingface_hub
+datasets
+salad-cloud-sdk
+python-dotenv
+
