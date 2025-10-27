@@ -2,6 +2,7 @@ transformers
 sentence-transformers
 faiss-cpu
 torch
+langchain
 pandas
 pytest
 accelerate
