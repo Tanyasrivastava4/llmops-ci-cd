@@ -240,7 +240,7 @@ def test_accuracy_and_latency():
         context = documents.iloc[i % len(documents)]["text"]
 
         start = time.time()
-        predicted = generate_answer(text, query)
+        predicted = generate_answer(context, query)
         latency = time.time() - start
         latencies.append(latency)
 
