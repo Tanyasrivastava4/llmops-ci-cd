@@ -347,13 +347,136 @@
 
 
 
+#import os
+#import pandas as pd
+#import torch
+#from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
+#from sentence_transformers import SentenceTransformer
+#import faiss
+#import time
+
+# -------------------------------
+# CONFIG
+# -------------------------------
+#DATA_DIR = "data"
+#OUTPUT_DIR = "outputs"
+#os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+#DOCUMENTS_FILE = os.path.join(DATA_DIR, "documents.csv")
+#GOLDEN_FILE = os.path.join(DATA_DIR, "golden_dataset.csv")
+#OUTPUT_FILE = os.path.join(OUTPUT_DIR, "model_responses.csv")
+
+# Use FLAN-T5 for better reasoning and text generation
+#MODEL_NAME = os.getenv("MODEL_NAME", "google/flan-t5-base")
+
+# -------------------------------
+# LOAD DATA
+# -------------------------------
+#def load_data():
+ #   docs_df = pd.read_csv(DOCUMENTS_FILE)
+  #  golden_df = pd.read_csv(GOLDEN_FILE)
+  #  return docs_df, golden_df
+
+
+# -------------------------------
+# BUILD EMBEDDINGS INDEX
+# -------------------------------
+#def build_index(docs_df):
+ #   doc_texts = docs_df["text"].tolist()
+  #  embedder = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
+   # doc_embeddings = embedder.encode(doc_texts, convert_to_numpy=True)
+
+   # dimension = doc_embeddings.shape[1]
+   # index = faiss.IndexFlatL2(dimension)
+   # index.add(doc_embeddings)
+   # return embedder, index, doc_texts
+
+
+# -------------------------------
+# LOAD MODEL
+# -------------------------------
+#def load_model():
+ #   print(f"🔹 Loading model: {MODEL_NAME}")
+  #  tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+   # model = AutoModelForSeq2SeqLM.from_pretrained(MODEL_NAME).to("cpu")
+   # return tokenizer, model
+
+
+# -------------------------------
+# RAG RETRIEVE + GENERATE
+# -------------------------------
+#def retrieve(query, embedder, index, doc_texts, k=1):
+ #   """Retrieve top-k relevant documents"""
+  #  query_emb = embedder.encode([query], convert_to_numpy=True)
+  #  _, indices = index.search(query_emb, k)
+  #  return " ".join(doc_texts[i] for i in indices[0])
+
+
+#def generate_answer(model, tokenizer, context, question, max_tokens=128):
+ #   """Generate answer using retrieved context (for T5-style model)"""
+  #  input_text = f"question: {question} context: {context}"
+   # input_ids = tokenizer(input_text, return_tensors="pt", truncation=True).input_ids.to(model.device)
+
+   # start_time = time.time()
+   # outputs = model.generate(input_ids, max_new_tokens=max_tokens)
+   # latency = time.time() - start_time
+
+   # answer = tokenizer.decode(outputs[0], skip_special_tokens=True)
+   # return answer.strip(), latency
+
+
+# -------------------------------
+# MAIN PIPELINE FUNCTION
+# -------------------------------
+#def run_pipeline():
+ #   docs_df, golden_df = load_data()
+ #   embedder, index, doc_texts = build_index(docs_df)
+ #   tokenizer, model = load_model()
+
+ #   responses = []
+
+ #   for _, row in golden_df.iterrows():
+  #      question = row["query"]
+   #     golden_answer = row["expected_answer"]
+
+  #      context = retrieve(question, embedder, index, doc_texts)
+ #       predicted_answer, latency = generate_answer(model, tokenizer, context, question)
+
+#        responses.append({
+ #           "question": question,
+ #           "golden_answer": golden_answer,
+ #           "predicted_answer": predicted_answer,
+ #           "context_used": context,
+ #           "latency": latency,
+ #       })
+
+ #       print(f"Q: {question}")
+ #       print(f"Predicted: {predicted_answer}")
+  #      print(f"Golden   : {golden_answer}")
+  #      print(f"⏱ Latency: {latency:.2f}s\n")
+
+  #  responses_df = pd.DataFrame(responses)
+   # responses_df.to_csv(OUTPUT_FILE, index=False)
+   # print(f"✅ Responses saved to {OUTPUT_FILE}")
+   # return responses_df
+
+
+# -------------------------------
+# ENTRY POINT (for manual runs)
+# -------------------------------
+#if __name__ == "__main__":
+ #   run_pipeline()
+
+
 import os
+import time
 import pandas as pd
 import torch
+import faiss
 from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 from sentence_transformers import SentenceTransformer
-import faiss
-import time
+from langsmith import Client
+from langsmith.run_helpers import traceable
 
 # -------------------------------
 # CONFIG
@@ -366,8 +489,14 @@ DOCUMENTS_FILE = os.path.join(DATA_DIR, "documents.csv")
 GOLDEN_FILE = os.path.join(DATA_DIR, "golden_dataset.csv")
 OUTPUT_FILE = os.path.join(OUTPUT_DIR, "model_responses.csv")
 
-# Use FLAN-T5 for better reasoning and text generation
 MODEL_NAME = os.getenv("MODEL_NAME", "google/flan-t5-base")
+
+# LangSmith Setup
+LANGCHAIN_API_KEY = os.getenv("LANGCHAIN_API_KEY")
+LANGCHAIN_PROJECT = os.getenv("LANGCHAIN_PROJECT", "RAG_Pipeline_Monitoring")
+
+client = Client(api_key=LANGCHAIN_API_KEY)
+print(f"📊 LangSmith connected to project: {LANGCHAIN_PROJECT}")
 
 # -------------------------------
 # LOAD DATA
@@ -377,9 +506,8 @@ def load_data():
     golden_df = pd.read_csv(GOLDEN_FILE)
     return docs_df, golden_df
 
-
 # -------------------------------
-# BUILD EMBEDDINGS INDEX
+# BUILD FAISS INDEX
 # -------------------------------
 def build_index(docs_df):
     doc_texts = docs_df["text"].tolist()
@@ -391,7 +519,6 @@ def build_index(docs_df):
     index.add(doc_embeddings)
     return embedder, index, doc_texts
 
-
 # -------------------------------
 # LOAD MODEL
 # -------------------------------
@@ -401,19 +528,20 @@ def load_model():
     model = AutoModelForSeq2SeqLM.from_pretrained(MODEL_NAME).to("cpu")
     return tokenizer, model
 
-
 # -------------------------------
-# RAG RETRIEVE + GENERATE
+# RETRIEVAL FUNCTION
 # -------------------------------
 def retrieve(query, embedder, index, doc_texts, k=1):
-    """Retrieve top-k relevant documents"""
     query_emb = embedder.encode([query], convert_to_numpy=True)
     _, indices = index.search(query_emb, k)
     return " ".join(doc_texts[i] for i in indices[0])
 
-
+# -------------------------------
+# TRACEABLE GENERATION FUNCTION
+# -------------------------------
+@traceable
 def generate_answer(model, tokenizer, context, question, max_tokens=128):
-    """Generate answer using retrieved context (for T5-style model)"""
+    """Generate answer using retrieved context (tracked by LangSmith)."""
     input_text = f"question: {question} context: {context}"
     input_ids = tokenizer(input_text, return_tensors="pt", truncation=True).input_ids.to(model.device)
 
@@ -424,23 +552,30 @@ def generate_answer(model, tokenizer, context, question, max_tokens=128):
     answer = tokenizer.decode(outputs[0], skip_special_tokens=True)
     return answer.strip(), latency
 
-
 # -------------------------------
-# MAIN PIPELINE FUNCTION
+# MAIN PIPELINE
 # -------------------------------
 def run_pipeline():
     docs_df, golden_df = load_data()
     embedder, index, doc_texts = build_index(docs_df)
     tokenizer, model = load_model()
 
+    correct = 0
+    total_latency = 0
     responses = []
 
     for _, row in golden_df.iterrows():
         question = row["query"]
         golden_answer = row["expected_answer"]
 
+        # Retrieve and generate
         context = retrieve(question, embedder, index, doc_texts)
         predicted_answer, latency = generate_answer(model, tokenizer, context, question)
+
+        # Track accuracy
+        if predicted_answer.strip().lower() == golden_answer.strip().lower():
+            correct += 1
+        total_latency += latency
 
         responses.append({
             "question": question,
@@ -455,14 +590,30 @@ def run_pipeline():
         print(f"Golden   : {golden_answer}")
         print(f"⏱ Latency: {latency:.2f}s\n")
 
+        # ✅ Log custom run to LangSmith
+        client.create_run(
+            name="RAG_Answer_Generation",
+            inputs={"query": question, "context": context},
+            outputs={"predicted": predicted_answer, "golden": golden_answer},
+            metadata={"latency_sec": latency}
+        )
+
+    # Compute metrics
+    accuracy = correct / len(golden_df)
+    avg_latency = total_latency / len(golden_df)
+
+    print(f"✅ Accuracy: {accuracy:.2%}")
+    print(f"⚡ Average Latency: {avg_latency:.2f}s")
+
+    # Save results to CSV
     responses_df = pd.DataFrame(responses)
     responses_df.to_csv(OUTPUT_FILE, index=False)
-    print(f"✅ Responses saved to {OUTPUT_FILE}")
+    print(f"📁 Responses saved to {OUTPUT_FILE}")
+
     return responses_df
 
-
 # -------------------------------
-# ENTRY POINT (for manual runs)
+# ENTRY POINT
 # -------------------------------
 if __name__ == "__main__":
     run_pipeline()
