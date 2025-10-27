@@ -122,6 +122,105 @@
 
 
 
+#this is the code we are having for sucessful deployment of ci/cd pipeline commenting this to adding the accuracy and latency part for the project
+
+#import os
+#import pandas as pd
+#import torch
+#from transformers import AutoTokenizer, AutoModelForCausalLM
+#from sentence_transformers import SentenceTransformer
+#import faiss
+
+# -------------------------------
+# Paths
+#DATA_DIR = "data"
+#OUTPUT_DIR = "outputs"
+#os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+#DOCUMENTS_FILE = os.path.join(DATA_DIR, "documents.csv")
+#GOLDEN_FILE = os.path.join(DATA_DIR, "golden_dataset.csv")
+#OUTPUT_FILE = os.path.join(OUTPUT_DIR, "model_responses.csv")
+
+# -------------------------------
+# Load documents and create embeddings
+# -------------------------------
+#docs_df = pd.read_csv(DOCUMENTS_FILE)
+#doc_texts = docs_df['text'].tolist()
+
+#embedder = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
+#doc_embeddings = embedder.encode(doc_texts, convert_to_numpy=True)
+
+#dimension = doc_embeddings.shape[1]
+#index = faiss.IndexFlatL2(dimension)
+#index.add(doc_embeddings)
+
+# -------------------------------
+# Load model (use tiny GPT2 for CI / disk-safe runs)
+# -------------------------------
+#MODEL_NAME = "sshleifer/tiny-gpt2"  # smaller model for CI
+
+#print("Loading tokenizer and model from Hugging Face...")
+#tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+#model = AutoModelForCausalLM.from_pretrained(MODEL_NAME).to("cpu")  # CPU only
+
+# -------------------------------
+# Load golden dataset
+# -------------------------------
+#golden_df = pd.read_csv(GOLDEN_FILE)
+
+# -------------------------------
+# Helper functions
+# -------------------------------
+#def retrieve(query, k=1):
+ #   """Retrieve top-k relevant documents using FAISS"""
+  #  query_emb = embedder.encode([query], convert_to_numpy=True)
+   # distances, indices = index.search(query_emb, k)
+   # retrieved_texts = [doc_texts[i] for i in indices[0]]
+   # return " ".join(retrieved_texts)
+
+#def generate_answer(context, question, max_tokens=50):
+ #   """Generate answer from LLM using retrieved context"""
+  #  input_text = f"Context: {context}\nQuestion: {question}\nAnswer:"
+   # input_ids = tokenizer(input_text, return_tensors="pt").input_ids.to(model.device)
+   # outputs = model.generate(input_ids, max_new_tokens=max_tokens)
+   # answer = tokenizer.decode(outputs[0], skip_special_tokens=True)
+    # Remove input text from output if present
+   # answer = answer.replace(input_text, "").strip()
+   # return answer
+
+# -------------------------------
+# Run RAG over golden dataset
+# -------------------------------
+#responses = []
+
+#for _, row in golden_df.iterrows():
+ #   question = row['query']
+  #  golden_answer = row['expected_answer']
+
+    # Retrieval
+   # context = retrieve(question, k=1)
+
+    # Generate answer
+    #predicted_answer = generate_answer(context, question)
+
+    # Save result
+   # responses.append({
+    #    "question": question,
+     #   "golden_answer": golden_answer,
+     #   "predicted_answer": predicted_answer,
+     #   "context_used": context
+    #})
+
+    #print(f"Q: {question}")
+   # print(f"Predicted: {predicted_answer}")
+   # print(f"Golden : {golden_answer}\n")
+
+# -------------------------------
+# Save responses to CSV
+# -------------------------------
+#responses_df = pd.DataFrame(responses)
+#responses_df.to_csv(OUTPUT_FILE, index=False)
+#print(f"✅ Responses saved to {OUTPUT_FILE}")
 
 
 
@@ -131,9 +230,11 @@ import torch
 from transformers import AutoTokenizer, AutoModelForCausalLM
 from sentence_transformers import SentenceTransformer
 import faiss
+import time
 
 # -------------------------------
-# Paths
+# CONFIG
+# -------------------------------
 DATA_DIR = "data"
 OUTPUT_DIR = "outputs"
 os.makedirs(OUTPUT_DIR, exist_ok=True)
@@ -142,84 +243,104 @@ DOCUMENTS_FILE = os.path.join(DATA_DIR, "documents.csv")
 GOLDEN_FILE = os.path.join(DATA_DIR, "golden_dataset.csv")
 OUTPUT_FILE = os.path.join(OUTPUT_DIR, "model_responses.csv")
 
-# -------------------------------
-# Load documents and create embeddings
-# -------------------------------
-docs_df = pd.read_csv(DOCUMENTS_FILE)
-doc_texts = docs_df['text'].tolist()
-
-embedder = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
-doc_embeddings = embedder.encode(doc_texts, convert_to_numpy=True)
-
-dimension = doc_embeddings.shape[1]
-index = faiss.IndexFlatL2(dimension)
-index.add(doc_embeddings)
+# Use a small model for CI/CD to avoid storage and timeout issues
+MODEL_NAME = os.getenv("MODEL_NAME", "sshleifer/tiny-gpt2")  # default for CI
 
 # -------------------------------
-# Load model (use tiny GPT2 for CI / disk-safe runs)
+# LOAD DATA
 # -------------------------------
-MODEL_NAME = "sshleifer/tiny-gpt2"  # smaller model for CI
+def load_data():
+    docs_df = pd.read_csv(DOCUMENTS_FILE)
+    golden_df = pd.read_csv(GOLDEN_FILE)
+    return docs_df, golden_df
 
-print("Loading tokenizer and model from Hugging Face...")
-tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
-model = AutoModelForCausalLM.from_pretrained(MODEL_NAME).to("cpu")  # CPU only
-
-# -------------------------------
-# Load golden dataset
-# -------------------------------
-golden_df = pd.read_csv(GOLDEN_FILE)
 
 # -------------------------------
-# Helper functions
+# BUILD EMBEDDINGS INDEX
 # -------------------------------
-def retrieve(query, k=1):
-    """Retrieve top-k relevant documents using FAISS"""
+def build_index(docs_df):
+    doc_texts = docs_df["text"].tolist()
+    embedder = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
+    doc_embeddings = embedder.encode(doc_texts, convert_to_numpy=True)
+
+    dimension = doc_embeddings.shape[1]
+    index = faiss.IndexFlatL2(dimension)
+    index.add(doc_embeddings)
+    return embedder, index, doc_texts
+
+
+# -------------------------------
+# LOAD MODEL
+# -------------------------------
+def load_model():
+    print(f"🔹 Loading model: {MODEL_NAME}")
+    tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+    model = AutoModelForCausalLM.from_pretrained(MODEL_NAME).to("cpu")
+    return tokenizer, model
+
+
+# -------------------------------
+# RAG RETRIEVE + GENERATE
+# -------------------------------
+def retrieve(query, embedder, index, doc_texts, k=1):
+    """Retrieve top-k relevant documents"""
     query_emb = embedder.encode([query], convert_to_numpy=True)
-    distances, indices = index.search(query_emb, k)
-    retrieved_texts = [doc_texts[i] for i in indices[0]]
-    return " ".join(retrieved_texts)
+    _, indices = index.search(query_emb, k)
+    return " ".join(doc_texts[i] for i in indices[0])
 
-def generate_answer(context, question, max_tokens=50):
-    """Generate answer from LLM using retrieved context"""
+
+def generate_answer(model, tokenizer, context, question, max_tokens=50):
+    """Generate answer using retrieved context"""
     input_text = f"Context: {context}\nQuestion: {question}\nAnswer:"
     input_ids = tokenizer(input_text, return_tensors="pt").input_ids.to(model.device)
+
+    start_time = time.time()
     outputs = model.generate(input_ids, max_new_tokens=max_tokens)
+    latency = time.time() - start_time
+
     answer = tokenizer.decode(outputs[0], skip_special_tokens=True)
-    # Remove input text from output if present
     answer = answer.replace(input_text, "").strip()
-    return answer
+    return answer, latency
+
 
 # -------------------------------
-# Run RAG over golden dataset
+# MAIN PIPELINE FUNCTION
 # -------------------------------
-responses = []
+def run_pipeline():
+    docs_df, golden_df = load_data()
+    embedder, index, doc_texts = build_index(docs_df)
+    tokenizer, model = load_model()
 
-for _, row in golden_df.iterrows():
-    question = row['query']
-    golden_answer = row['expected_answer']
+    responses = []
 
-    # Retrieval
-    context = retrieve(question, k=1)
+    for _, row in golden_df.iterrows():
+        question = row["query"]
+        golden_answer = row["expected_answer"]
 
-    # Generate answer
-    predicted_answer = generate_answer(context, question)
+        context = retrieve(question, embedder, index, doc_texts)
+        predicted_answer, latency = generate_answer(model, tokenizer, context, question)
 
-    # Save result
-    responses.append({
-        "question": question,
-        "golden_answer": golden_answer,
-        "predicted_answer": predicted_answer,
-        "context_used": context
-    })
+        responses.append({
+            "question": question,
+            "golden_answer": golden_answer,
+            "predicted_answer": predicted_answer,
+            "context_used": context,
+            "latency": latency,
+        })
 
-    print(f"Q: {question}")
-    print(f"Predicted: {predicted_answer}")
-    print(f"Golden : {golden_answer}\n")
+        print(f"Q: {question}")
+        print(f"Predicted: {predicted_answer}")
+        print(f"Golden   : {golden_answer}")
+        print(f"⏱ Latency: {latency:.2f}s\n")
+
+    responses_df = pd.DataFrame(responses)
+    responses_df.to_csv(OUTPUT_FILE, index=False)
+    print(f"✅ Responses saved to {OUTPUT_FILE}")
+    return responses_df
+
 
 # -------------------------------
-# Save responses to CSV
+# ENTRY POINT (for manual runs)
 # -------------------------------
-responses_df = pd.DataFrame(responses)
-responses_df.to_csv(OUTPUT_FILE, index=False)
-print(f"✅ Responses saved to {OUTPUT_FILE}")
-
+if __name__ == "__main__":
+    run_pipeline()
