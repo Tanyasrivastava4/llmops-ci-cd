@@ -67,9 +67,19 @@ jobs:
       # -------------------------------
       # 6️⃣ Run RAG pipeline (HF login)
       # -------------------------------
-      - name: Run RAG pipeline with HF login
+      #- name: Run RAG pipeline with HF login
+       # env:
+        #  HF_TOKEN: ${{ secrets.HF_TOKEN }}
+        #run: |
+         # python -c "import os; from huggingface_hub import login; login(token=os.environ['HF_TOKEN'])"
+          #python rag_systems/run_rag_pipeline.py
+
+         # 7️⃣ Run RAG pipeline with HF login
+      # -------------------------------
+      - name: Run RAG pipeline
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          MODEL_NAME: google/flan-t5-base
         run: |
           python -c "import os; from huggingface_hub import login; login(token=os.environ['HF_TOKEN'])"
           python rag_systems/run_rag_pipeline.py
