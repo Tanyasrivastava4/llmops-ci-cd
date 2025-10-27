@@ -237,10 +237,10 @@ def test_accuracy_and_latency():
     for i, row in golden.iterrows():
         query = row["query"]
         expected = row["expected_answer"]
-        context = documents.iloc[i % len(documents)]["context"]
+        context = documents.iloc[i % len(documents)]["text"]
 
         start = time.time()
-        predicted = generate_answer(context, query)
+        predicted = generate_answer(text, query)
         latency = time.time() - start
         latencies.append(latency)
 
