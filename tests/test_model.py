@@ -216,7 +216,7 @@ from sentence_transformers import SentenceTransformer
 # Load data
 # -----------------------------
 documents = pd.read_csv("data/documents.csv")
-golden = pd.read_csv("data/golden.csv")
+golden = pd.read_csv("data/golden_dataset.csv")
 
 embedder = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
 
