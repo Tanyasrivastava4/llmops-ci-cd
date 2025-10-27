@@ -204,10 +204,64 @@
 
 
 
+#import sys, os, time
+#sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+
+#from rag_systems.run_rag_pipeline import generate_answer
+#import pandas as pd
+#from sklearn.metrics.pairwise import cosine_similarity
+#from sentence_transformers import SentenceTransformer
+
+# -----------------------------
+# Load data
+# -----------------------------
+#documents = pd.read_csv("data/documents.csv")
+#golden = pd.read_csv("data/golden_dataset.csv")
+
+#embedder = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
+
+# -----------------------------
+# Helper function
+# -----------------------------
+#def compute_similarity(a, b):
+ #   embeddings = embedder.encode([a, b], convert_to_numpy=True)
+  #  return cosine_similarity([embeddings[0]], [embeddings[1]])[0][0]
+
+# -----------------------------
+# Test function
+# -----------------------------
+#def test_accuracy_and_latency():
+ #   correct = 0
+  #  latencies = []
+
+   # for i, row in golden.iterrows():
+    #    query = row["query"]
+     #   expected = row["expected_answer"]
+      #  context = documents.iloc[i % len(documents)]["text"]
+
+     #   start = time.time()
+     #   predicted = generate_answer(context, query)
+     #   latency = time.time() - start
+     #   latencies.append(latency)
+
+     #   sim = compute_similarity(predicted, expected)
+     #   if sim > 0.8:
+     #       correct += 1
+
+    #accuracy = correct / len(golden)
+    #avg_latency = sum(latencies) / len(golden)
+
+    #print(f"\n✅ Accuracy: {accuracy*100:.2f}%")
+    #print(f"⚡ Average Latency: {avg_latency:.2f}s")
+
+    #assert accuracy >= 0.9, f"❌ Accuracy too low: {accuracy:.2f}"
+    #assert avg_latency < 2.0, f"❌ Latency too high: {avg_latency:.2f}"
+
+
 import sys, os, time
 sys.path.append(os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from rag_systems.run_rag_pipeline import generate_answer
+from rag_systems.run_rag_pipeline import load_model, generate_answer
 import pandas as pd
 from sklearn.metrics.pairwise import cosine_similarity
 from sentence_transformers import SentenceTransformer
@@ -218,6 +272,10 @@ from sentence_transformers import SentenceTransformer
 documents = pd.read_csv("data/documents.csv")
 golden = pd.read_csv("data/golden_dataset.csv")
 
+# Load model and tokenizer
+tokenizer, model = load_model()
+
+# Load sentence embedder for evaluation
 embedder = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
 
 # -----------------------------
@@ -240,8 +298,7 @@ def test_accuracy_and_latency():
         context = documents.iloc[i % len(documents)]["text"]
 
         start = time.time()
-        predicted = generate_answer(context, query)
-        latency = time.time() - start
+        predicted, latency = generate_answer(model, tokenizer, context, query)
         latencies.append(latency)
 
         sim = compute_similarity(predicted, expected)
