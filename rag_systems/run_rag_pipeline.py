@@ -224,10 +224,133 @@
 
 
 
+#import os
+#import pandas as pd
+#import torch
+#from transformers import AutoTokenizer, AutoModelForCausalLM
+#from sentence_transformers import SentenceTransformer
+#import faiss
+#import time
+
+# -------------------------------
+# CONFIG
+# -------------------------------
+#DATA_DIR = "data"
+#OUTPUT_DIR = "outputs"
+#os.makedirs(OUTPUT_DIR, exist_ok=True)
+
+#DOCUMENTS_FILE = os.path.join(DATA_DIR, "documents.csv")
+#GOLDEN_FILE = os.path.join(DATA_DIR, "golden_dataset.csv")
+#OUTPUT_FILE = os.path.join(OUTPUT_DIR, "model_responses.csv")
+
+# Use a small model for CI/CD to avoid storage and timeout issues
+#MODEL_NAME = os.getenv("MODEL_NAME", "sshleifer/tiny-gpt2")  # default for CI
+
+# -------------------------------
+# LOAD DATA
+# -------------------------------
+#def load_data():
+ #   docs_df = pd.read_csv(DOCUMENTS_FILE)
+  #  golden_df = pd.read_csv(GOLDEN_FILE)
+   # return docs_df, golden_df
+
+
+# -------------------------------
+# BUILD EMBEDDINGS INDEX
+# -------------------------------
+#def build_index(docs_df):
+ #   doc_texts = docs_df["text"].tolist()
+  #  embedder = SentenceTransformer("sentence-transformers/all-MiniLM-L6-v2")
+   # doc_embeddings = embedder.encode(doc_texts, convert_to_numpy=True)
+
+   # dimension = doc_embeddings.shape[1]
+    #index = faiss.IndexFlatL2(dimension)
+    #index.add(doc_embeddings)
+    #return embedder, index, doc_texts
+
+
+# -------------------------------
+# LOAD MODEL
+# -------------------------------
+#def load_model():
+ #   print(f"🔹 Loading model: {MODEL_NAME}")
+  #  tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
+   # model = AutoModelForCausalLM.from_pretrained(MODEL_NAME).to("cpu")
+    #return tokenizer, model
+
+
+# -------------------------------
+# RAG RETRIEVE + GENERATE
+# -------------------------------
+#def retrieve(query, embedder, index, doc_texts, k=1):
+ #   """Retrieve top-k relevant documents"""
+  #  query_emb = embedder.encode([query], convert_to_numpy=True)
+   # _, indices = index.search(query_emb, k)
+    #return " ".join(doc_texts[i] for i in indices[0])
+
+
+#def generate_answer(model, tokenizer, context, question, max_tokens=50):
+ #   """Generate answer using retrieved context"""
+  #  input_text = f"Context: {context}\nQuestion: {question}\nAnswer:"
+   # input_ids = tokenizer(input_text, return_tensors="pt").input_ids.to(model.device)
+
+   # start_time = time.time()
+   # outputs = model.generate(input_ids, max_new_tokens=max_tokens)
+   # latency = time.time() - start_time
+
+   # answer = tokenizer.decode(outputs[0], skip_special_tokens=True)
+   # answer = answer.replace(input_text, "").strip()
+   # return answer, latency
+
+
+# -------------------------------
+# MAIN PIPELINE FUNCTION
+# -------------------------------
+#def run_pipeline():
+ #   docs_df, golden_df = load_data()
+  #  embedder, index, doc_texts = build_index(docs_df)
+   # tokenizer, model = load_model()
+
+    #responses = []
+
+   # for _, row in golden_df.iterrows():
+    #    question = row["query"]
+     #   golden_answer = row["expected_answer"]
+
+#        context = retrieve(question, embedder, index, doc_texts)
+ #       predicted_answer, latency = generate_answer(model, tokenizer, context, question)
+#
+ #       responses.append({
+  #          "question": question,
+   #         "golden_answer": golden_answer,
+    #        "predicted_answer": predicted_answer,
+     #       "context_used": context,
+      #      "latency": latency,
+       # })
+
+        #print(f"Q: {question}")
+        #print(f"Predicted: {predicted_answer}")
+        #print(f"Golden   : {golden_answer}")
+        #print(f"⏱ Latency: {latency:.2f}s\n")
+
+    #responses_df = pd.DataFrame(responses)
+    #responses_df.to_csv(OUTPUT_FILE, index=False)
+    #print(f"✅ Responses saved to {OUTPUT_FILE}")
+    #return responses_df
+
+
+# -------------------------------
+# ENTRY POINT (for manual runs)
+# -------------------------------
+#if __name__ == "__main__":
+ #   run_pipeline()
+
+
+
 import os
 import pandas as pd
 import torch
-from transformers import AutoTokenizer, AutoModelForCausalLM
+from transformers import AutoTokenizer, AutoModelForSeq2SeqLM
 from sentence_transformers import SentenceTransformer
 import faiss
 import time
@@ -243,8 +366,8 @@ DOCUMENTS_FILE = os.path.join(DATA_DIR, "documents.csv")
 GOLDEN_FILE = os.path.join(DATA_DIR, "golden_dataset.csv")
 OUTPUT_FILE = os.path.join(OUTPUT_DIR, "model_responses.csv")
 
-# Use a small model for CI/CD to avoid storage and timeout issues
-MODEL_NAME = os.getenv("MODEL_NAME", "sshleifer/tiny-gpt2")  # default for CI
+# Use FLAN-T5 for better reasoning and text generation
+MODEL_NAME = os.getenv("MODEL_NAME", "google/flan-t5-base")
 
 # -------------------------------
 # LOAD DATA
@@ -275,7 +398,7 @@ def build_index(docs_df):
 def load_model():
     print(f"🔹 Loading model: {MODEL_NAME}")
     tokenizer = AutoTokenizer.from_pretrained(MODEL_NAME)
-    model = AutoModelForCausalLM.from_pretrained(MODEL_NAME).to("cpu")
+    model = AutoModelForSeq2SeqLM.from_pretrained(MODEL_NAME).to("cpu")
     return tokenizer, model
 
 
@@ -289,18 +412,17 @@ def retrieve(query, embedder, index, doc_texts, k=1):
     return " ".join(doc_texts[i] for i in indices[0])
 
 
-def generate_answer(model, tokenizer, context, question, max_tokens=50):
-    """Generate answer using retrieved context"""
-    input_text = f"Context: {context}\nQuestion: {question}\nAnswer:"
-    input_ids = tokenizer(input_text, return_tensors="pt").input_ids.to(model.device)
+def generate_answer(model, tokenizer, context, question, max_tokens=128):
+    """Generate answer using retrieved context (for T5-style model)"""
+    input_text = f"question: {question} context: {context}"
+    input_ids = tokenizer(input_text, return_tensors="pt", truncation=True).input_ids.to(model.device)
 
     start_time = time.time()
     outputs = model.generate(input_ids, max_new_tokens=max_tokens)
     latency = time.time() - start_time
 
     answer = tokenizer.decode(outputs[0], skip_special_tokens=True)
-    answer = answer.replace(input_text, "").strip()
-    return answer, latency
+    return answer.strip(), latency
 
 
 # -------------------------------
