@@ -235,8 +235,8 @@ def test_accuracy_and_latency():
     latencies = []
 
     for i, row in golden.iterrows():
-        query = row["question"]
-        expected = row["answer"]
+        query = row["query"]
+        expected = row["expected_answer"]
         context = documents.iloc[i % len(documents)]["context"]
 
         start = time.time()
