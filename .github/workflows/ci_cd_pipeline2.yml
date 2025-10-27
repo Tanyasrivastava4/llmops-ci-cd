@@ -76,14 +76,30 @@ jobs:
 
          # 7️⃣ Run RAG pipeline with HF login
       # -------------------------------
-      - name: Run RAG pipeline
+     # - name: Run RAG pipeline
+     #   env:
+     #     HF_TOKEN: ${{ secrets.HF_TOKEN }}
+    #      MODEL_NAME: google/flan-t5-base
+    #    run: |
+    #      python -c "import os; from huggingface_hub import login; login(token=os.environ['HF_TOKEN'])"
+    #      python rag_systems/run_rag_pipeline.py
+
+
+            # -------------------------------
+      - name: Run RAG pipeline with LangSmith logging
         env:
           HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          LANGCHAIN_API_KEY: ${{ secrets.LANGCHAIN_API_KEY }}
+          LANGCHAIN_PROJECT: "RAG_Pipeline"
+          LANGCHAIN_TRACING_V2: "true"
           MODEL_NAME: google/flan-t5-base
         run: |
+          echo "🔑 Logging into Hugging Face..."
           python -c "import os; from huggingface_hub import login; login(token=os.environ['HF_TOKEN'])"
-          python rag_systems/run_rag_pipeline.py
 
+          echo "📊 LangSmith tracking enabled for project: $LANGCHAIN_PROJECT"
+          python rag_systems/run_rag_pipeline.py
+      
       # -------------------------------
       # 7️⃣ Upload pipeline results
       # -------------------------------
