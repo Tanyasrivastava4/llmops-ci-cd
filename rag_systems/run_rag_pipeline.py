@@ -736,13 +736,23 @@ def run_pipeline():
         print(f"Golden   : {golden_answer}")
         print(f"⏱ Latency: {latency:.2f}s\n")
 
-        # ✅ Log custom run to LangSmith
+
         client.create_run(
             name="RAG_Answer_Generation",
+            run_type="chain",  # 👈 REQUIRED ARGUMENT
             inputs={"query": question, "context": context},
             outputs={"predicted": predicted_answer, "golden": golden_answer},
             metadata={"latency_sec": latency}
         )
+
+     
+        # ✅ Log custom run to LangSmith
+        #client.create_run(
+         #   name="RAG_Answer_Generation",
+          #  inputs={"query": question, "context": context},
+           # outputs={"predicted": predicted_answer, "golden": golden_answer},
+            #metadata={"latency_sec": latency}
+        #)
 
     # Compute metrics
     accuracy = correct / len(golden_df)
