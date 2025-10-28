@@ -34,35 +34,175 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-          
-      # 👇 This step downloads the model dynamically
+
+      # -------------------------------
+      # 4️⃣ Download & Cache Hugging Face Model
+      # -------------------------------
       - name: Download model
         run: |
           python -c "from transformers import AutoModelForSeq2SeqLM, AutoTokenizer; \
           AutoModelForSeq2SeqLM.from_pretrained('google/flan-t5-base'); \
           AutoTokenizer.from_pretrained('google/flan-t5-base')"
 
-      # 👇 This caches the model for later runs
       - uses: actions/cache@v4
         with:
           path: ~/.cache/huggingface
           key: ${{ runner.os }}-hf-cache
 
       # -------------------------------
-      # 4️⃣ Run tests
+      # 5️⃣ Run Tests
       # -------------------------------
       - name: Run pytest
         run: |
           pytest tests/ --maxfail=1 --disable-warnings -q
 
       # -------------------------------
-      # 5️⃣ Clean workspace
+      # 6️⃣ Clean workspace
       # -------------------------------
       - name: Clean workspace
         run: |
           mkdir -p outputs
           rm -rf outputs/*
           rm -rf .cache/*
+
+      # -------------------------------
+      # 7️⃣ Run RAG pipeline with LangSmith logging
+      # -------------------------------
+      - name: Run RAG pipeline with LangSmith logging
+        env:
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          LANGCHAIN_API_KEY: ${{ secrets.LANGCHAIN_API_KEY }}
+          LANGCHAIN_PROJECT: "RAG_Pipeline"
+          LANGCHAIN_TRACING_V2: "true"
+          MODEL_NAME: google/flan-t5-base
+        run: |
+          echo "🔑 Logging into Hugging Face..."
+          python -c "import os; from huggingface_hub import login; login(token=os.environ['HF_TOKEN'])"
+
+          echo "📊 LangSmith tracking enabled for project: $LANGCHAIN_PROJECT"
+          python rag_systems/run_rag_pipeline.py
+
+      # -------------------------------
+      # 8️⃣ Upload pipeline results as artifact
+      # -------------------------------
+      - name: Upload model_responses.csv as artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: model_responses
+          path: outputs/model_responses.csv
+
+      # -------------------------------
+      # 9️⃣ Log in to Docker Hub
+      # -------------------------------
+      - name: Log in to Docker Hub
+        run: |
+          echo "${{ secrets.DOCKER_PASSWORD }}" | docker login -u "${{ secrets.DOCKER_USERNAME }}" --password-stdin
+
+      # -------------------------------
+      # 🔟 Build and Push Docker Image
+      # -------------------------------
+      - name: Build and Push Docker image
+        run: |
+          IMAGE_NAME=docker.io/${{ secrets.DOCKER_USERNAME }}/rag_systems:latest
+          echo "🛠️ Building Docker image: $IMAGE_NAME"
+          docker build -t $IMAGE_NAME .
+          echo "📦 Pushing Docker image to Docker Hub..."
+          docker push $IMAGE_NAME
+
+      # -------------------------------
+      # 1️⃣1️⃣ Deploy to SaladCloud using deploy.py
+      # -------------------------------
+      - name: Deploy to SaladCloud
+        env:
+          SALAD_API_KEY: ${{ secrets.SALAD_API_KEY }}
+          HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          ORGANIZATION_NAME: "intileo"
+          PROJECT_NAME: "replit"
+          IMAGE_NAME: "docker.io/${{ secrets.DOCKER_USERNAME }}/rag_systems:latest"
+          CONTAINER_NAME: "rag-llmops-deploy"
+          GPU_TYPE: "ed563892-aacd-40f5-80b7-90c9be6c759b"
+        run: |
+          pip install --upgrade salad-cloud-sdk python-dotenv
+          echo "✅ Dependencies installed."
+          python deploy.py
+
+
+
+
+
+
+
+
+
+
+
+
+
+#name: RAG CI/CD Pipeline
+
+#on:
+ # push:
+  #  branches:
+   #   - main
+  #pull_request:
+   # branches:
+    #  - main
+
+#jobs:
+ # build-test-deploy:
+  #  runs-on: ubuntu-latest
+
+  #  steps:
+      # -------------------------------
+      # 1️⃣ Checkout the code
+      # -------------------------------
+   #   - name: Checkout repository
+    #    uses: actions/checkout@v4
+
+      # -------------------------------
+      # 2️⃣ Set up Python
+      # -------------------------------
+     # - name: Set up Python 3.11
+      #  uses: actions/setup-python@v5
+       # with:
+        #  python-version: '3.11'
+
+      # -------------------------------
+      # 3️⃣ Install dependencies
+      # -------------------------------
+      #- name: Install dependencies
+       # run: |
+        #  python -m pip install --upgrade pip
+         # pip install -r requirements.txt
+          
+      # 👇 This step downloads the model dynamically
+      #- name: Download model
+       # run: |
+        #  python -c "from transformers import AutoModelForSeq2SeqLM, AutoTokenizer; \
+         # AutoModelForSeq2SeqLM.from_pretrained('google/flan-t5-base'); \
+          #AutoTokenizer.from_pretrained('google/flan-t5-base')"
+
+      # 👇 This caches the model for later runs
+      #- uses: actions/cache@v4
+       # with:
+        #  path: ~/.cache/huggingface
+         # key: ${{ runner.os }}-hf-cache
+
+      # -------------------------------
+      # 4️⃣ Run tests
+      # -------------------------------
+      #- name: Run pytest
+       # run: |
+        #  pytest tests/ --maxfail=1 --disable-warnings -q
+
+      # -------------------------------
+      # 5️⃣ Clean workspace
+      # -------------------------------
+      #- name: Clean workspace
+       # run: |
+        #  mkdir -p outputs
+         # rm -rf outputs/*
+          #rm -rf .cache/*
 
       # -------------------------------
       # 6️⃣ Run RAG pipeline (HF login)
@@ -86,46 +226,46 @@ jobs:
 
 
             # -------------------------------
-      - name: Run RAG pipeline with LangSmith logging
-        env:
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
-          LANGCHAIN_API_KEY: ${{ secrets.LANGCHAIN_API_KEY }}
-          LANGCHAIN_PROJECT: "RAG_Pipeline"
-          LANGCHAIN_TRACING_V2: "true"
-          MODEL_NAME: google/flan-t5-base
-        run: |
-          echo "🔑 Logging into Hugging Face..."
-          python -c "import os; from huggingface_hub import login; login(token=os.environ['HF_TOKEN'])"
+      #- name: Run RAG pipeline with LangSmith logging
+       # env:
+        #  HF_TOKEN: ${{ secrets.HF_TOKEN }}
+         # LANGCHAIN_API_KEY: ${{ secrets.LANGCHAIN_API_KEY }}
+          #LANGCHAIN_PROJECT: "RAG_Pipeline"
+          #LANGCHAIN_TRACING_V2: "true"
+          #MODEL_NAME: google/flan-t5-base
+        #run: |
+         # echo "🔑 Logging into Hugging Face..."
+          #python -c "import os; from huggingface_hub import login; login(token=os.environ['HF_TOKEN'])"
 
-          echo "📊 LangSmith tracking enabled for project: $LANGCHAIN_PROJECT"
-          python rag_systems/run_rag_pipeline.py
+          #echo "📊 LangSmith tracking enabled for project: $LANGCHAIN_PROJECT"
+          #python rag_systems/run_rag_pipeline.py
       
       # -------------------------------
       # 7️⃣ Upload pipeline results
       # -------------------------------
-      - name: Upload model_responses.csv as artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: model_responses
-          path: outputs/model_responses.csv
+      #- name: Upload model_responses.csv as artifact
+       # uses: actions/upload-artifact@v4
+        #with:
+         # name: model_responses
+          #path: outputs/model_responses.csv
           
 
       # -------------------------------
       # 8️⃣ Deploy to SaladCloud using deploy.py
       # -------------------------------
-      - name: Deploy to SaladCloud
-        env:
-          SALAD_API_KEY: ${{ secrets.SALAD_API_KEY }}
-          HF_TOKEN: ${{ secrets.HF_TOKEN }}
-          ORGANIZATION_NAME: "intileo"
-          PROJECT_NAME: "replit"
-          IMAGE_NAME: "docker.io/tanyasrivastava930/rag_systems:latest"
-          CONTAINER_NAME: "rag-llmops-deploy"
-          GPU_TYPE: "ed563892-aacd-40f5-80b7-90c9be6c759b"
-        run: |
-          pip install --upgrade salad-cloud-sdk python-dotenv
-          echo "✅ Dependencies installed."
-          python deploy.py
+      #- name: Deploy to SaladCloud
+       # env:
+        #  SALAD_API_KEY: ${{ secrets.SALAD_API_KEY }}
+         # HF_TOKEN: ${{ secrets.HF_TOKEN }}
+          #ORGANIZATION_NAME: "intileo"
+         # PROJECT_NAME: "replit"
+         # IMAGE_NAME: "docker.io/tanyasrivastava930/rag_systems:latest"
+         # CONTAINER_NAME: "rag-llmops-deploy"
+         # GPU_TYPE: "ed563892-aacd-40f5-80b7-90c9be6c759b"
+       # run: |
+        #  pip install --upgrade salad-cloud-sdk python-dotenv
+         # echo "✅ Dependencies installed."
+          #python deploy.py
 #  zap_scan:
 #    runs-on: ubuntu-latest
 #    needs: build-test-deploy
