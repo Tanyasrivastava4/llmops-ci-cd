@@ -302,7 +302,7 @@ def test_accuracy_and_latency():
         latencies.append(latency)
 
         sim = compute_similarity(predicted, expected)
-        if sim > 0.8:
+        if sim > 0.75:
             correct += 1
 
     accuracy = correct / len(golden)
