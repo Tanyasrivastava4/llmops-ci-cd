@@ -131,7 +131,8 @@ jobs:
           ORGANIZATION_NAME: "intileo"
           PROJECT_NAME: "replit"
           IMAGE_NAME: "docker.io/${{ secrets.DOCKER_USERNAME }}/rag_systems:latest"
-          CONTAINER_NAME: "rag-llmops-deploy"
+          #CONTAINER_NAME: "rag-llmops-deploy"
+          CONTAINER_NAME: "rag-deploy-${{ github.run_id }}"
           GPU_TYPE: "ed563892-aacd-40f5-80b7-90c9be6c759b"
         run: |
           pip install --upgrade salad-cloud-sdk python-dotenv
