@@ -102,13 +102,13 @@ jobs:
       # 3️⃣ Pull pre-built Docker image from Docker Hub
       # ---------------------------------------
       - name: Pull RAG Docker image
-        run: docker pull tanyasrivastava4/rag-system:latest
+        run: docker pull tanyasrivastava930/rag_systems:latest
 
       # ---------------------------------------
       # 4️⃣ Run tests inside the Docker container
       # ---------------------------------------
       - name: Run tests inside container
-        run: docker run --rm tanyasrivastava4/rag-system:latest pytest
+        run: docker run --rm tanyasrivastava930/rag_systems:latest pytest
  
       # -------------------------------
       # 🔟 Build and Push Docker Image
