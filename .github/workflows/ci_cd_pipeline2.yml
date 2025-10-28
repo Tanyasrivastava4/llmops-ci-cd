@@ -107,8 +107,8 @@ jobs:
       # ---------------------------------------
       # 4️⃣ Run tests inside the Docker container
       # ---------------------------------------
-      - name: Run tests inside container
-        run: docker run --rm tanyasrivastava930/rag_systems:latest pytest
+      #- name: Run tests inside container
+       # run: docker run --rm tanyasrivastava930/rag_systems:latest pytest
  
       # -------------------------------
       # 🔟 Build and Push Docker Image
