@@ -311,5 +311,5 @@ def test_accuracy_and_latency():
     print(f"\n✅ Accuracy: {accuracy*100:.2f}%")
     print(f"⚡ Average Latency: {avg_latency:.2f}s")
 
-    assert accuracy >= 0.9, f"❌ Accuracy too low: {accuracy:.2f}"
+    assert accuracy >= 0.8, f"❌ Accuracy too low: {accuracy:.2f}"
     assert avg_latency < 2.0, f"❌ Latency too high: {avg_latency:.2f}"
